@@ -1,0 +1,241 @@
+{
+  "Records": [
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "MODIFY",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "id": {
+            "S": "02ea9f76-decb-47d3-9f0b-7d0aa3bd096e"
+          }
+        },
+        "NewImage": {
+          "categories": {
+            "L": [
+              {
+                "M": {
+                  "id": {
+                    "S": "21fa393a-97b9-4af1-ae36-146989cf3eda"
+                  },
+                  "name": {
+                    "S": "Brasileiro"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "a838ae78-f81e-4c3a-8bca-839e2331ed0d"
+                  },
+                  "name": {
+                    "S": "Saladas"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "6005db26-2849-4799-a7ce-adaa3cd3ac76"
+                  },
+                  "name": {
+                    "S": "Sucos"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "57e7c3ff-4b16-472c-b67a-c31cbb1aea82"
+                  },
+                  "name": {
+                    "S": "Saudável"
+                  }
+                }
+              }
+            ]
+          },
+          "contact": {
+            "M": {
+              "email": {
+                "S": "balada.mix@todogreen.com"
+              },
+              "telephone": {
+                "S": "04533032"
+              }
+            }
+          },
+          "description": {
+            "S": ""
+          },
+          "email": {
+            "S": "balada.mix@todogreen.com"
+          },
+          "end_time": {
+            "N": "1619114400000"
+          },
+          "id": {
+            "S": "02ea9f76-decb-47d3-9f0b-7d0aa3bd096e"
+          },
+          "is_online": {
+            "BOOL": true
+          },
+          "location": {
+            "M": {
+              "city": {
+                "S": "São Paulo"
+              },
+              "complement": {
+                "S": ""
+              },
+              "country": {
+                "S": "Brasil"
+              },
+              "latitude": {
+                "N": "-23.5854596"
+              },
+              "longitude": {
+                "N": "-46.6839378"
+              },
+              "number": {
+                "N": "15"
+              },
+              "postal_code": {
+                "S": "04533-030"
+              },
+              "state": {
+                "S": "São Paulo"
+              },
+              "street": {
+                "S": "Rua Lopes Neto"
+              }
+            }
+          },
+          "logo": {
+            "S": "https://s3-sa-east-1.amazonaws.com/todo.static.images/app.partners/logo_8ecd1151-043a-4a5f-98dc-9f0e5789b27e.jpg"
+          },
+          "name": {
+            "S": "Balada Mix São Paulo"
+          },
+          "open_time": {
+            "N": "1619082000000"
+          },
+          "radius": {
+            "N": "15000"
+          },
+          "status": {
+            "S": "IS_CLOSED"
+          },
+          "updatedAt": {
+            "N": "1623374368314"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/partners/stream/2021-06-17T17:55:39.759"
+    },
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "MODIFY",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "id": {
+            "S": "03c38943-6e74-45d9-ae95-d37a58a760ac"
+          }
+        },
+        "NewImage": {
+          "categories": {
+            "L": []
+          },
+          "contact": {
+            "M": {
+              "email": {
+                "S": "nirai@todogreen.com"
+              },
+              "telephone": {
+                "S": "11982533000"
+              }
+            }
+          },
+          "description": {
+            "S": ""
+          },
+          "email": {
+            "S": "nirai@todogreen.com"
+          },
+          "end_time": {
+            "N": "1619114400000"
+          },
+          "id": {
+            "S": "03c38943-6e74-45d9-ae95-d37a58a760ac"
+          },
+          "is_online": {
+            "BOOL": true
+          },
+          "location": {
+            "M": {
+              "city": {
+                "S": "São Paulo"
+              },
+              "complement": {
+                "S": ""
+              },
+              "country": {
+                "S": "Brasil"
+              },
+              "latitude": {
+                "N": "-23.5929002"
+              },
+              "longitude": {
+                "N": "-46.6832392"
+              },
+              "number": {
+                "N": "574"
+              },
+              "postal_code": {
+                "S": "04544-051"
+              },
+              "state": {
+                "S": "São Paulo"
+              },
+              "street": {
+                "S": "R. Min. Jesuíno Cardoso"
+              }
+            }
+          },
+          "logo": {
+            "S": "https://s3-sa-east-1.amazonaws.com/todo.static.images/app.partners/logo_c28e58c5-747d-4607-aac4-2255b2bb187c.jpg"
+          },
+          "name": {
+            "S": "Nirai"
+          },
+          "open_time": {
+            "N": "1619082000000"
+          },
+          "radius": {
+            "N": "15000"
+          },
+          "status": {
+            "S": "IS_CLOSED"
+          },
+          "updatedAt": {
+            "N": "1623374586640"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/partners/stream/2021-06-17T17:55:39.759"
+    }
+  ]
+}

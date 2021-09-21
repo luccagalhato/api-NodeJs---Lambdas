@@ -1,0 +1,4 @@
+# .gitignore sample
+###################
+# ... except for this one.
+!.gitignore

@@ -1,0 +1,8 @@
+export enum CompanyType {
+  MEI = 'MEI',
+  EI = 'EI',
+  EIRELI = 'EIRELI',
+  LTDA = 'LTDA',
+  SA = 'SA',
+  INSTITUITION_NGO_ASSOCIATION = 'INSTITUITION_NGO_ASSOCIATION',
+}

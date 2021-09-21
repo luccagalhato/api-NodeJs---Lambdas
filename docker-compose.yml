@@ -1,0 +1,59 @@
+version: "3"
+services:
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4572:4572"
+      - "8080:8080"
+    environment:
+      - SERVICES=s3,lambda, sns, api gateway
+      - LAMBDA_EXECUTOR=local
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /home/todo
+
+  dynamodb-local:
+    container_name: dynamodb-local
+    image: amazon/dynamodb-local
+    command: -jar DynamoDBLocal.jar -sharedDb -dbPath /home/todo
+    volumes:
+      - /home/todo
+    ports:
+      - "8000:8000"
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+  elastic:
+    container_name: elastic
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.2
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.13.2
+    ports:
+      - 5601:5601
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elastic:9200
+
+volumes:
+  data:
+    driver: local

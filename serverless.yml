@@ -1,0 +1,1325 @@
+service: todo-app
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-dynamodb-local
+  - serverless-domain-manager
+  - serverless-plugin-typescript
+  - serverless-plugin-optimize
+  - serverless-offline
+
+custom:
+  recEnv:
+    dev: dev
+    prod: prod
+    local: dev
+  dynamoCapacity:
+    default:
+      dev: 1
+      prod: 5
+      local: 1
+    max:
+      dev: 2
+      prod: 15
+      local: 2
+  domains:
+    dev: dev.todogreen.com
+    prod: api.todogreen.com
+    local: localhost:3000/local
+  apigateway:
+    certificateArn:
+      dev: arn:aws:acm:sa-east-1:546526672337:certificate/b5576061-eff6-4af4-8d08-0f80574cf5ca
+      prod: arn:aws:acm:sa-east-1:546526672337:certificate/c3817c8f-af60-4739-b50b-37b21918b3ad
+      local: arn:aws:acm:sa-east-1:546526672337:certificate/c3817c8f-af60-4739-b50b-37b21918b3ad
+  customDomain:
+    domainName: ${self:custom.domains.${opt:stage}}
+    certificateArn: ${self:custom.apigateway.certificateArn.${opt:stage}}
+    basePath: ''
+    stage: ${self:custom.recEnv.${opt:stage}}
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  timeout: 60
+  region: sa-east-1
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource: "arn:aws:secretsmanager:sa-east-1:546526672337:secret:GoogleMapsAPI-5y6zix"
+    - Effect: "Allow"
+      Action:
+        - "es:*"
+        - "dynamodb:DescribeStream"
+        - "dynamodb:GetRecords"
+        - "dynamodb:GetShardIterator"
+        - "dynamodb:ListStreams"
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+      Resource: "*"
+  environment:
+    AWS_ES_HOST: !GetAtt ElasticsearchDomain.DomainEndpoint
+    CREATE_ORDER_ARN: !Ref CreateOrder
+    ACCEPT_ORDER_ARN: !Ref AcceptOrder
+    REFUSE_ORDER_ARN: !Ref RefuseOrder
+    NEW_DELIVERYMAN_ARN: !Ref NewDeliveryMan
+    ARRIVE_ON_PARTNER: !Ref OnParner
+    ORDER_READY_ARN: !Ref OrderReady
+    ORDER_PICKED_ARN: !Ref PickedOrder
+    ORDER_ARRIVED_ARN: !Ref OrderHasArrived
+    ORDER_DELIVERED_ARN: !Ref OrderDelivered
+    URL_ENDPOINT_AUTHENTICATION: http://${self:custom.domains.${opt:stage}}/auth
+    URL_ENDPOINT_CLIENT: http://${self:custom.domains.${opt:stage}}/clients
+    URL_ENDPOINT_COLLABORATOR: http://${self:custom.domains.${opt:stage}}/collaborators
+    URL_ENDPOINT_GEOLOCATION: http://${self:custom.domains.${opt:stage}}/geolocations
+    URL_ENDPOINT_PARTNER: http://${self:custom.domains.${opt:stage}}/partners
+    URL_ENDPOINT_SEARCH: http://${self:custom.domains.${opt:stage}}/search
+    CATALOG_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Catalogs
+    CATEGORIES_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Categories
+    CLIENTS_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Clients
+    COLLABORATORS_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Collaborators
+    DELIVERIES_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Deliveries
+    ORDERS_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Orders
+    PARTNERS_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Partners
+    PRODUCTS_TABLE: todo-${self:custom.recEnv.${opt:stage}}-Products
+    REDIS_HOST: !GetAtt RedisCluster.RedisEndpoint.Address
+    REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+    QUEUE_URL: !Ref GeolocationSQS
+
+package:
+  excludeDevDependencies: true
+  individually: true
+
+functions:
+  authentication:
+    handler: apps/authentication/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /auth/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /auth
+          cors: true
+
+  geolocations:
+    handler: apps/geolocation/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /geolocations/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /geolocations
+          cors: true
+
+  collaborators:
+    handler: apps/collaborator/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /collaborators/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /collaborators
+          cors: true
+
+  clients:
+    handler: apps/client/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /clients/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /clients
+          cors: true
+
+  partners:
+    handler: apps/partner/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /partners/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /partners
+          cors: true
+
+  payments:
+    handler: apps/payments/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /payments/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /payments
+          cors: true
+
+  search:
+    handler: apps/search/src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /search/{any+}
+          cors: true
+      - http:
+          method: any
+          path: /search/
+          cors: true
+    vpc:
+      securityGroupIds:
+        - !Ref ElasticSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet
+
+  elastic-search-categories:
+    handler: apps/search/src/elastic-search-categories-lambda.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt: [Categories, StreamArn]
+    vpc:
+      securityGroupIds:
+        - !Ref ElasticSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet
+
+  elastic-search-products:
+    handler: apps/search/src/elastic-search-products-lambda.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt: [Products, StreamArn]
+    vpc:
+      securityGroupIds:
+        - !Ref ElasticSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet
+
+  elastic-search-partners:
+    handler: apps/search/src/elastic-search-partners-lambda.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt: [Partners, StreamArn]
+    vpc:
+      securityGroupIds:
+        - !Ref ElasticSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet
+
+resources:
+  Resources:
+    AcceptOrder:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-AcceptOrder
+
+    RefuseOrder:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-RefuseOrder
+
+    CreateOrder:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-CreateOrder
+
+    OrderDelivered:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-OrderDelivered
+
+    OrderHasArrived:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-OrderHasArrived
+
+    OrderReady:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-OrderReady
+
+    PickedOrder:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-PickedOrder
+
+    OnParner:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-OnParner
+
+    NewDeliveryMan:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: todo-${opt:stage}-NewDeliveryMan
+
+    SubsCollaboratorsAcceptedOrder:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/collaborators/sns-accepted-order
+        Protocol: https
+        TopicArn: !Ref AcceptOrder
+
+    SubsCollaboratorsNewDeliveryMan:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/collaborators/sns-accepted-order
+        Protocol: https
+        TopicArn: !Ref NewDeliveryMan
+
+    SubsClientsAcceptedOrder:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-accepted-order
+        Protocol: https
+        TopicArn: !Ref AcceptOrder
+
+    SubsClientsRefusedOrder:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-refused-order
+        Protocol: https
+        TopicArn: !Ref RefuseOrder
+
+    SubsPartnersCreateOrder:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/partners/sns-created-order
+        Protocol: https
+        TopicArn: !Ref CreateOrder
+
+    SubsClientsOrderDelivered:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-order-delivered
+        Protocol: https
+        TopicArn: !Ref OrderDelivered
+
+    SubsClientsOrderHasArrived:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-order-has-arrived
+        Protocol: https
+        TopicArn: !Ref OrderHasArrived
+
+    SubsCollaboratorsOrderIsReady:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/collaborators/sns-order-is-ready
+        Protocol: https
+        TopicArn: !Ref OrderReady
+
+    SubsClientsOrderIsReady:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-order-is-ready
+        Protocol: https
+        TopicArn: !Ref OrderReady
+
+    SubsClientsPickedOrder:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-picked-order
+        Protocol: https
+        TopicArn: !Ref PickedOrder
+
+    SubsClientsOnParner:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/clients/sns-on-partner
+        Protocol: https
+        TopicArn: !Ref OnParner
+
+    SubsPartnerOnParner:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: https://${self:custom.domains.${opt:stage}}/parners/sns-on-partner
+        Protocol: https
+        TopicArn: !Ref OnParner
+
+    GeolocationSQS:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: todo-${opt:stage}-Geolocation
+
+    Datalake:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: todo.${opt:stage}.datalake
+
+    StaticImages:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: todo.${opt:stage}.staticimages
+        AccessControl: PublicRead
+
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref StaticImages
+                  - /*
+        Bucket: !Ref StaticImages
+
+    KinesisDynamo:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        ShardCount: 1
+        Name: todo-${opt:stage}-KinesisDynamo
+
+    DatalakeFirehoseRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: ""
+              Effect: Allow
+              Principal:
+                Service: firehose.amazonaws.com
+              Action: "sts:AssumeRole"
+              Condition:
+                StringEquals:
+                  "sts:ExternalId": !Ref "AWS::AccountId"
+
+    DatalakeFirehosePolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: todo-${opt:stage}-DatalakeFirehosePolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:AbortMultipartUpload"
+                - "s3:GetBucketLocation"
+                - "s3:GetObject"
+                - "s3:ListBucket"
+                - "s3:ListBucketMultipartUploads"
+                - "s3:PutObject"
+              Resource:
+                - !Join
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - !Ref Datalake
+                - !Join
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - !Ref Datalake
+                    - "*"
+            - Effect: "Allow"
+              Action:
+                - "kinesis:DescribeStream"
+                - "kinesis:GetShardIterator"
+                - "kinesis:GetRecords"
+                - "kinesis:ListShards"
+              Resource:
+                - !GetAtt KinesisDynamo.Arn
+        Roles:
+          - !Ref DatalakeFirehoseRole
+
+    DatalakeFirehose:
+      DependsOn:
+        - DatalakeFirehoseRole
+        - DatalakeFirehosePolicy
+      Type: AWS::KinesisFirehose::DeliveryStream
+      Properties:
+        DeliveryStreamName: todo-${opt:stage}-DatalakeFirehose
+        DeliveryStreamType: KinesisStreamAsSource
+        KinesisStreamSourceConfiguration:
+          KinesisStreamARN: !GetAtt KinesisDynamo.Arn
+          RoleARN: !GetAtt DatalakeFirehoseRole.Arn
+        S3DestinationConfiguration:
+          BucketARN: !GetAtt Datalake.Arn
+          CompressionFormat: GZIP
+          Prefix: dynamo/
+          ErrorOutputPrefix: deadletter/
+          RoleARN: !GetAtt DatalakeFirehoseRole.Arn
+
+    Catalogs:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Catalogs
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    Categories:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Categories
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    Clients:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Clients
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+
+    Deliveries:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Deliveries
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+
+    Orders:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Orders
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+
+    Partners:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Partners
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    Products:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Products
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "sku"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "sku"
+            KeyType: "HASH"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    Collaborators:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-${opt:stage}-Collaborators
+        BillingMode: "PROVISIONED"
+        ProvisionedThroughput:
+          ReadCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+          WriteCapacityUnits: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        AttributeDefinitions:
+          - AttributeName: "geoKey"
+            AttributeType: "N"
+          - AttributeName: "rangeKey"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "geoKey"
+            KeyType: "HASH"
+          - AttributeName: "rangeKey"
+            KeyType: "RANGE"
+        LocalSecondaryIndexes:
+          - IndexName: "geohash-index"
+            KeySchema:
+              - AttributeName: "geoKey"
+                KeyType: "HASH"
+              - AttributeName: "rangeKey"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"
+        KinesisStreamSpecification:
+          StreamArn: !GetAtt KinesisDynamo.Arn
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    ScalingRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Effect: "Allow"
+              Principal:
+                Service:
+                  - application-autoscaling.amazonaws.com
+              Action:
+                - "sts:AssumeRole"
+        Path: "/"
+        Policies:
+          -
+            PolicyName: "root"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                -
+                  Effect: "Allow"
+                  Action:
+                    - "dynamodb:DescribeTable"
+                    - "dynamodb:UpdateTable"
+                    - "cloudwatch:PutMetricAlarm"
+                    - "cloudwatch:DescribeAlarms"
+                    - "cloudwatch:GetMetricStatistics"
+                    - "cloudwatch:SetAlarmState"
+                    - "cloudwatch:DeleteAlarms"
+                  Resource: "*"
+
+    CatalogsWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Catalogs
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CatalogsWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CatalogsWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    CatalogsReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Catalogs
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CatalogsReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CatalogsReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    CategoriesWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Categories
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CategoriesWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CategoriesWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    CategoriesReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Categories
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CategoriesReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CategoriesReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    ClientsWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Clients
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    ClientsWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref ClientsWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    ClientsReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Clients
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    ClientsReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref ClientsReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    DeliveriesWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Deliveries
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    DeliveriesWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref DeliveriesWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    DeliveriesReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Deliveries
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    DeliveriesReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref DeliveriesReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+
+    OrdersWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Orders
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    OrdersWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref OrdersWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    OrdersReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Orders
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    OrdersReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref OrdersReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    PartnersWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Partners
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    PartnersWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref PartnersWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    PartnersReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Partners
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    PartnersReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref PartnersReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    ProductsWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Products
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    ProductsWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref ProductsWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    ProductsReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Products
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    ProductsReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref ProductsReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    CollaboratorsWriteCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Collaborators
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CollaboratorsWriteScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: WriteAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CollaboratorsWriteCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+            
+    CollaboratorsReadCapacityScalableTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.dynamoCapacity.max.${opt:stage}}
+        MinCapacity: ${self:custom.dynamoCapacity.default.${opt:stage}}
+        ResourceId: !Join
+          - /
+          - - table
+            - !Ref Collaborators
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:ReadCapacityUnits
+        ServiceNamespace: dynamodb
+
+    CollaboratorsReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref CollaboratorsReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 50.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+    ElasticsearchDomain:
+      Type: "AWS::Elasticsearch::Domain"
+      Properties:
+        DomainName: todo-${opt:stage}-elasticsearch
+        ElasticsearchVersion: "7.10"
+        ElasticsearchClusterConfig:
+          InstanceCount: 1
+          InstanceType: "t3.small.elasticsearch"
+        EBSOptions:
+          EBSEnabled: true
+          Iops: 0
+          VolumeSize: 10
+          VolumeType: "gp2"
+        AccessPolicies:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: "es:*"
+              Resource: "*"
+        VPCOptions:
+          SubnetIds:
+            - !Ref PrivateSubnet
+          SecurityGroupIds:
+            - !Ref ElasticSecurityGroup
+
+    RedisSubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties: 
+        Description: Redis Subnets Group for ${opt:stage}
+        CacheSubnetGroupName: todo-${opt:stage}-redis-subnetgroup
+        SubnetIds: 
+          - !Ref PublicSubnetA
+          # - !Ref PublicSubnetB
+          # - !Ref PublicSubnetC
+
+    RedisCluster:
+      Type: "AWS::ElastiCache::CacheCluster"
+      Properties:
+        ClusterName: todo-${opt:stage}-cache-region-sao-paulo
+        CacheNodeType: cache.t3.micro
+        CacheSubnetGroupName: !Ref RedisSubnetGroup
+        VpcSecurityGroupIds:
+          - !Ref RedisSecurityGroup
+        Engine: redis
+        NumCacheNodes: "1"
+
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        EnableDnsSupport: true
+        EnableDnsHostnames: true
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-vpc
+
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-ig
+
+    InternetGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        InternetGatewayId: !Ref InternetGateway
+        VpcId: !Ref VPC
+
+    PublicSubnetA:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [ 0, !GetAZs '' ]
+        CidrBlock: 10.0.10.0/24
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-pub-sn-a
+
+    # PublicSubnetB:
+    #   Type: AWS::EC2::Subnet
+    #   Properties:
+    #     VpcId: !Ref VPC
+    #     AvailabilityZone: !Select [ 1, !GetAZs '' ]
+    #     CidrBlock: 10.0.11.0/24
+    #     MapPublicIpOnLaunch: true
+    #     Tags:
+    #       - Key: Name
+    #         Value: todo-${opt:stage}-pub-sn-b
+
+    # PublicSubnetC:
+    #   Type: AWS::EC2::Subnet
+    #   Properties:
+    #     VpcId: !Ref VPC
+    #     AvailabilityZone: !Select [ 2, !GetAZs '' ]
+    #     CidrBlock: 10.0.12.0/24
+    #     MapPublicIpOnLaunch: true
+    #     Tags:
+    #       - Key: Name
+    #         Value: todo-${opt:stage}-pub-sn-c
+
+    PrivateSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+        CidrBlock: 10.0.20.0/24
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-pri-sn-b
+
+    NatGatewayAEIP:
+      Type: AWS::EC2::EIP
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        Domain: vpc
+
+    # NatGatewayBEIP:
+    #   Type: AWS::EC2::EIP
+    #   DependsOn: InternetGatewayAttachment
+    #   Properties:
+    #     Domain: vpc
+
+    # NatGatewayCEIP:
+    #   Type: AWS::EC2::EIP
+    #   DependsOn: InternetGatewayAttachment
+    #   Properties:
+    #     Domain: vpc
+
+    NatGatewayA:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+        SubnetId: !Ref PublicSubnetA
+
+    # NatGatewayB:
+    #   Type: AWS::EC2::NatGateway
+    #   Properties:
+    #     AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+    #     SubnetId: !Ref PublicSubnetB
+
+    # NatGatewayC:
+    #   Type: AWS::EC2::NatGateway
+    #   Properties:
+    #     AllocationId: !GetAtt NatGatewayCEIP.AllocationId
+    #     SubnetId: !Ref PublicSubnetC
+
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage} Public Routes
+
+    DefaultPublicRoute:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+
+    PublicSubnetARouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnetA
+
+    # PublicSubnetBRouteTableAssociation:
+    #   Type: AWS::EC2::SubnetRouteTableAssociation
+    #   Properties:
+    #     RouteTableId: !Ref PublicRouteTable
+    #     SubnetId: !Ref PublicSubnetB
+
+    # PublicSubnetCRouteTableAssociation:
+    #   Type: AWS::EC2::SubnetRouteTableAssociation
+    #   Properties:
+    #     RouteTableId: !Ref PublicRouteTable
+    #     SubnetId: !Ref PublicSubnetC
+
+    PrivateRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage} Private Routes (AZ1)
+
+    DefaultPrivateRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NatGatewayA
+
+    PrivateSubnetRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable
+        SubnetId: !Ref PrivateSubnet
+
+    SecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+        GroupDescription: "Default Security Group"
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+
+    NoIngressSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: "Security group with no ingress rule"
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-noingress-sg
+
+    ElasticSecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+        GroupDescription: "Elastic Search SG"
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            CidrIp: 0.0.0.0/0
+            FromPort: 0
+            ToPort: 65535
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-elasticsearch-sg
+
+    RedisSecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+        GroupDescription: "Redis SG"
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            CidrIp: 0.0.0.0/0
+            FromPort: 6379
+            ToPort: 6379
+        Tags:
+          - Key: Name
+            Value: todo-${opt:stage}-redis-sg

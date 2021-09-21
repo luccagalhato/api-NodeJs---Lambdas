@@ -1,0 +1,209 @@
+{
+  "Records": [
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "sku": {
+            "S": "012bdab0-1f83-4544-bc68-b3fdf3ebd8fc"
+          }
+        },
+        "NewImage": {
+          "createdAt": {
+            "N": "1623374443930"
+          },
+          "description": {
+            "S": "Pedaços suculentos de peito de frango e molho teriyaki "
+          },
+          "image_url": {
+            "S": "https://s3-sa-east-1.amazonaws.com/app.products/product_24b9336e-4b8d-4c51-8282-5ca9e4b02ad4.jpeg"
+          },
+          "name": {
+            "S": "Frango Teriyaki"
+          },
+          "options": {
+            "L": [
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              },
+              {
+                "M": {}
+              }
+            ]
+          },
+          "sku": {
+            "S": "012bdab0-1f83-4544-bc68-b3fdf3ebd8fc"
+          },
+          "updatedAt": {
+            "N": "1623374443930"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/categories/stream/2021-06-18T02:43:00.621"
+    },
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "sku": {
+            "S": "03d08e04-fecd-449b-92f1-aa226333665b"
+          }
+        },
+        "NewImage": {
+          "createdAt": {
+            "N": "1623375184226"
+          },
+          "description": {
+            "S": "Delicado chantilly com pedaços de morango e disco de suspiro. \nFatia de aproximadamente 200g."
+          },
+          "image_url": {
+            "S": "https://s3-sa-east-1.amazonaws.com/app.products/product_b3ac3709-c9b3-4781-be9e-ee146baeb98e.jpeg"
+          },
+          "name": {
+            "S": "Merengue de Morangos"
+          },
+          "options": {
+            "L": [
+              {
+                "M": {}
+              }
+            ]
+          },
+          "sku": {
+            "S": "03d08e04-fecd-449b-92f1-aa226333665b"
+          },
+          "updatedAt": {
+            "N": "1623375184226"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/categories/stream/2021-06-18T02:43:00.621"
+    },
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "REMOVE",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "sku": {
+            "S": "03d08e04-fecd-449b-92f1-aa226333665b"
+          }
+        },
+        "NewImage": {
+          "createdAt": {
+            "N": "1623375184226"
+          },
+          "description": {
+            "S": "Delicado chantilly com pedaços de morango e disco de suspiro. \nFatia de aproximadamente 200g."
+          },
+          "image_url": {
+            "S": "https://s3-sa-east-1.amazonaws.com/app.products/product_b3ac3709-c9b3-4781-be9e-ee146baeb98e.jpeg"
+          },
+          "name": {
+            "S": "Merengue de Morangos"
+          },
+          "options": {
+            "L": [
+              {
+                "M": {}
+              }
+            ]
+          },
+          "sku": {
+            "S": "03d08e04-fecd-449b-92f1-aa226333665b"
+          },
+          "updatedAt": {
+            "N": "1623375184226"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/categories/stream/2021-06-18T02:43:00.621"
+    },
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "sku": {
+            "S": "07b84c3c-c2e2-4a90-b4f8-86e5797f175e"
+          }
+        },
+        "NewImage": {
+          "createdAt": {
+            "N": "1623374562794"
+          },
+          "description": {
+            "S": "Escolha sua proteína  \nAtum ralado - Frango desfiado - Shimeji - peito de peru\n\nRecheado com queijo frescal, tomate fresco, folhas de espinafre, manjericão e gergelim."
+          },
+          "image_url": {
+            "S": "https://s3-sa-east-1.amazonaws.com/app.products/product_2cdb9639-3134-4149-8f98-dc78523fd236.jpg"
+          },
+          "name": {
+            "S": "Omelete especial"
+          },
+          "options": {
+            "L": [
+              {
+                "M": {}
+              }
+            ]
+          },
+          "sku": {
+            "S": "07b84c3c-c2e2-4a90-b4f8-86e5797f175e"
+          },
+          "updatedAt": {
+            "N": "1623374562794"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/categories/stream/2021-06-18T02:43:00.621"
+    }
+  ]
+}

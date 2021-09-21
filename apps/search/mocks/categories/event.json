@@ -1,0 +1,37 @@
+{
+  "Records": [
+    {
+      "eventID": "30c478f315bf5a5596a069ee7c09c1b8",
+      "eventName": "MODIFY",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "sa-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1624452495,
+        "Keys": {
+          "id": {
+            "S": "15e9a3e5-c9ad-4a92-9e85-fba389661545"
+          }
+        },
+        "NewImage": {
+          "createdAt": {
+            "N": "1623368989769"
+          },
+          "name": {
+            "S": "Snacks"
+          },
+          "id": {
+            "S": "15e9a3e5-c9ad-4a92-9e85-fba389661545"
+          },
+          "updatedAt": {
+            "N": "1623368989770"
+          }
+        },
+        "SequenceNumber": "263378400000000015418953531",
+        "SizeBytes": 120,
+        "StreamViewType": "NEW_IMAGE"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:sa-east-1:546526672337:table/categories/stream/2021-06-18T02:43:00.621"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+export enum PaymentCardStatus {
+  AWAITING = 'AWAITING',
+  VERIFYING = 'VERIFYING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

@@ -1,0 +1,93 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/todogreen/src",
+  "monorepo": true,
+  "root": "apps/todogreen",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/todogreen/tsconfig.app.json"
+  },
+  "projects": {
+    "todogreen": {
+      "type": "application",
+      "root": "apps/todogreen",
+      "entryFile": "main",
+      "sourceRoot": "apps/todogreen/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/todogreen/tsconfig.app.json"
+      }
+    },
+    "authentication": {
+      "type": "application",
+      "root": "apps/authentication",
+      "entryFile": "main",
+      "sourceRoot": "apps/authentication/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/authentication/tsconfig.app.json"
+      }
+    },
+    "partner": {
+      "type": "application",
+      "root": "apps/partner",
+      "entryFile": "main",
+      "sourceRoot": "apps/partner/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/partner/tsconfig.app.json"
+      }
+    },
+    "client": {
+      "type": "application",
+      "root": "apps/client",
+      "entryFile": "main",
+      "sourceRoot": "apps/client/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/client/tsconfig.app.json"
+      }
+    },
+    "collaborator": {
+      "type": "application",
+      "root": "apps/collaborator",
+      "entryFile": "main",
+      "sourceRoot": "apps/collaborator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/collaborator/tsconfig.app.json"
+      }
+    },
+    "geolocation": {
+      "type": "application",
+      "root": "apps/geolocation",
+      "entryFile": "main",
+      "sourceRoot": "apps/geolocation/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/geolocation/tsconfig.app.json"
+      }
+    },
+    "payments": {
+      "type": "application",
+      "root": "apps/payments",
+      "entryFile": "main",
+      "sourceRoot": "apps/payments/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payments/tsconfig.app.json"
+      }
+    },
+    "juno": {
+      "type": "library",
+      "root": "libs/juno",
+      "entryFile": "index",
+      "sourceRoot": "libs/juno/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/juno/tsconfig.lib.json"
+      }
+    },
+    "search": {
+      "type": "application",
+      "root": "apps/search",
+      "entryFile": "main",
+      "sourceRoot": "apps/search/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/search/tsconfig.app.json"
+      }
+    }
+  }
+}
